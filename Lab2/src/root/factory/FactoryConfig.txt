@@ -1,0 +1,9 @@
+POP root.worker.StackPoper
+PUSH root.worker.StackPusher
++ root.worker.Summator
+- root.worker.Subtractor
+* root.worker.Multiplier
+/ root.worker.Divider
+SQRT root.worker.SquareRootFinder
+PRINT root.worker.Printer
+DEFINE root.worker.ValueDefiner

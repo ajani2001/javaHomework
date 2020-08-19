@@ -1,0 +1,48 @@
+/square figure
+0 0
+0 1
+1 0
+1 1
+nonrotatable
+
+/long figure
+-1 0
+0 0
+1 0
+2 0
+rotatable
+
+/z-figure
+-1 1
+0 1
+0 0
+1 0
+rotatable
+
+/opposite-z-figure
+1 1
+0 1
+0 0
+-1 0
+rotatable
+
+/t-figure
+-1 0
+0 0
+1 0
+0 1
+rotatable
+
+/l-figure
+0 1
+0 0
+0 -1
+1 -1
+rotatable
+
+/opposite-l-figure
+0 1
+0 0
+0 -1
+-1 -1
+rotatable
