@@ -1,0 +1,4 @@
+BodyStorageCapacity=10
+BodySupplierDelay=100
+MotorSupplierDelay=100
+DealersDelay=2000
