@@ -9,6 +9,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         InputStreamReader factoryConfigReader = new InputStreamReader(Factory.class.getResourceAsStream("FactoryConfig.txt"));
         Factory carFactory = new Factory(factoryConfigReader);
+        /*
         carFactory.start();
         for(int i = 0; i < 15; ++i) {
             System.out.println("Accessory suppliers: "+carFactory.getAccessorySuppliersNumber()+", delay: "+carFactory.getAccessorySuppliersDelay());
@@ -22,5 +23,7 @@ public class Main {
             Thread.sleep(1500);
         }
         carFactory.stop();
+        */
+        SwingView window = new SwingView(carFactory);
     }
 }

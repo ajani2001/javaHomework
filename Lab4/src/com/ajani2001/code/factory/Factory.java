@@ -23,6 +23,7 @@ public class Factory {
     Supplier<CarMotor> motorSupplier;
     ThreadPool workers;
     ArrayList<Dealer> dealers;
+    boolean isStarted;
 
     public Factory(Reader configReader) throws IOException {
         Properties config = new Properties();
@@ -54,7 +55,8 @@ public class Factory {
         return result;
     }
 
-    public void start(){
+    public synchronized void start() { //?
+        if(isStarted) return;
         for(Supplier<CarAccessory> supplier: accessorySuppliers) {
             supplier.start();
         }
@@ -67,9 +69,12 @@ public class Factory {
         for(int i = 0; i < dealers.size(); ++i) {
             workers.putTask(new WorkerTask(accessoryStorage, motorStorage, bodyStorage, carStorage));
         }
+        isStarted = true;
+        System.out.println("Started");
     }
 
-    public void stop(){
+    public synchronized void stop(){
+        if(!isStarted) return;
         for(Supplier<CarAccessory> supplier: accessorySuppliers) {
             supplier.interrupt();
         }
@@ -91,6 +96,10 @@ public class Factory {
             }
         } catch (InterruptedException e) {
             return;
+        }
+        finally {
+            System.out.println("Stopped");
+            isStarted = false;
         }
     }
 
@@ -192,6 +201,10 @@ public class Factory {
             result += dealer.carNumber;
         }
         return result;
+    }
+
+    public synchronized boolean isStarted() { //?
+        return isStarted;
     }
 
 }
