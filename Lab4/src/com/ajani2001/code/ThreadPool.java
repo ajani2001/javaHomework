@@ -37,6 +37,10 @@ public class ThreadPool {
         }
     }
 
+    public int getTaskQueueSize() {
+        return taskList.size();
+    }
+
     public void start() {
         for(Thread t: threads) {
             t.start();

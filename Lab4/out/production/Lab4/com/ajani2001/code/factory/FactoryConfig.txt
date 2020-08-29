@@ -1,4 +1,5 @@
 BodyStorageCapacity=10
-BodySupplierDelay=100
-MotorSupplierDelay=100
-DealersDelay=2000
+BodySupplierDelay=200
+MotorSupplierDelay=200
+DealersDelay=1000
+LogFileName=log.txt

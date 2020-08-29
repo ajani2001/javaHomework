@@ -20,12 +20,16 @@ public class SwingView {
     final JSlider bodySupplierDelaySlider;
     final JSlider motorSupplierDelaySlider;
     final JSlider dealersDelaySlider;
+    final JLabel accessoryDelayLabel;
+    final JLabel bodyDelayLabel;
+    final JLabel motorDelayLabel;
+    final JLabel dealerDelayLabel;
     final JTextArea amountTextArea;
     final JButton startButton;
 
     public SwingView(Factory factory) {
         JFrame window = new JFrame("Factory");
-        window.setSize(500, 300);
+        window.setSize(1200, 400);
         window.getContentPane().setLayout(new GridBagLayout());
         window.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         window.addWindowListener(new WindowAdapter() {
@@ -45,7 +49,11 @@ public class SwingView {
         carStorageBar = new JProgressBar(0, factory.getCarStorageCapacity());
         carStorageBar.setStringPainted(true);
 
-        accessorySuppliersDelaySlider = new JSlider(0, 10000, (int) factory.getAccessorySuppliersDelay());
+        accessorySuppliersDelaySlider = new JSlider(0, 2000, (int) factory.getAccessorySuppliersDelay());
+        accessorySuppliersDelaySlider.setMajorTickSpacing(500);
+        accessorySuppliersDelaySlider.setMinorTickSpacing(100);
+        accessorySuppliersDelaySlider.setPaintTicks(true);
+        accessorySuppliersDelaySlider.setPaintLabels(true);
         accessorySuppliersDelaySlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -55,7 +63,11 @@ public class SwingView {
                 }
             }
         });
-        bodySupplierDelaySlider = new JSlider(0, 10000, (int) factory.getBodySupplierDelay());
+        bodySupplierDelaySlider = new JSlider(0, 2000, (int) factory.getBodySupplierDelay());
+        bodySupplierDelaySlider.setMajorTickSpacing(500);
+        bodySupplierDelaySlider.setMinorTickSpacing(100);
+        bodySupplierDelaySlider.setPaintTicks(true);
+        bodySupplierDelaySlider.setPaintLabels(true);
         bodySupplierDelaySlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -65,7 +77,11 @@ public class SwingView {
                 }
             }
         });
-        motorSupplierDelaySlider = new JSlider(0, 10000, (int) factory.getMotorSupplierDelay());
+        motorSupplierDelaySlider = new JSlider(0, 2000, (int) factory.getMotorSupplierDelay());
+        motorSupplierDelaySlider.setMajorTickSpacing(500);
+        motorSupplierDelaySlider.setMinorTickSpacing(100);
+        motorSupplierDelaySlider.setPaintTicks(true);
+        motorSupplierDelaySlider.setPaintLabels(true);
         motorSupplierDelaySlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -75,7 +91,11 @@ public class SwingView {
                 }
             }
         });
-        dealersDelaySlider = new JSlider(0, 10000, (int) factory.getDealersDelay());
+        dealersDelaySlider = new JSlider(0, 2000, (int) factory.getDealersDelay());
+        dealersDelaySlider.setMajorTickSpacing(500);
+        dealersDelaySlider.setMinorTickSpacing(100);
+        dealersDelaySlider.setPaintTicks(true);
+        dealersDelaySlider.setPaintLabels(true);
         dealersDelaySlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -98,6 +118,11 @@ public class SwingView {
                 startButton.setEnabled(false);
             }
         });
+
+        accessoryDelayLabel = new JLabel("Accessory suppliers delay (ms)");
+        bodyDelayLabel = new JLabel("Body supplier delay (ms)");
+        motorDelayLabel = new JLabel("Motor supplier delay (ms)");
+        dealerDelayLabel = new JLabel("Dealers delay (ms)");
 
         Thread cycleUpdater = new Thread(new Runnable() {
             final long delayMillis = 100;
@@ -127,6 +152,7 @@ public class SwingView {
                     int bodiesSupplied = factory.getCarBodiesSuppliedNumber();
                     int motorSupplied = factory.getCarMotorsSuppliedNumber();
                     int carsSupplied = factory.getCarsSuppliedNumber();
+                    int tasksInQueue = factory.getWorkerTaskQueueSize();
 
                     accessoryStorageBar.setValue(accessoryStorageItemNumber);
                     accessoryStorageBar.setString("Accessory storage: "+accessoryStorageItemNumber+"/"+accessoryStorageCapacity);
@@ -137,7 +163,7 @@ public class SwingView {
                     carStorageBar.setValue(carStorageItemNumber);
                     carStorageBar.setString("Car storage: "+carStorageItemNumber+"/"+carStorageCapacity);
 
-                    amountTextArea.setText("Accessory suppliers: "+accessorySuppliersNumber+", Dealers: "+dealersNumber+", total supplied: accessory: "+accessorySupplied+", bodies: "+bodiesSupplied+", motors: "+motorSupplied+", cars: "+carsSupplied);
+                    amountTextArea.setText("Accessory suppliers: "+accessorySuppliersNumber+", Dealers: "+dealersNumber+System.lineSeparator()+"Total supplied: accessory: "+accessorySupplied+", bodies: "+bodiesSupplied+", motors: "+motorSupplied+", cars: "+carsSupplied+System.lineSeparator()+"Tasks in queue: "+tasksInQueue);
                     startButton.setEnabled(!factory.isStarted());
 
                     try {
@@ -150,30 +176,36 @@ public class SwingView {
         });
 
         GridBagConstraints constraints = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0,0,0,0), 0, 0);
-        window.getContentPane().add(accessoryStorageBar, constraints);
 
         constraints.gridx = 1;
-        window.getContentPane().add(accessorySuppliersDelaySlider, constraints);
-
+        window.getContentPane().add(accessoryDelayLabel, constraints);
         constraints.gridy = 1;
-        window.getContentPane().add(bodySupplierDelaySlider, constraints);
-
-        constraints.gridx = 0;
-        window.getContentPane().add(bodyStorageBar, constraints);
-
+        window.getContentPane().add(accessorySuppliersDelaySlider, constraints);
         constraints.gridy = 2;
-        window.getContentPane().add(motorStorageBar, constraints);
-
-        constraints.gridx = 1;
-        window.getContentPane().add(motorSupplierDelaySlider, constraints);
-
+        window.getContentPane().add(bodyDelayLabel, constraints);
         constraints.gridy = 3;
+        window.getContentPane().add(bodySupplierDelaySlider, constraints);
+        constraints.gridy = 4;
+        window.getContentPane().add(motorDelayLabel, constraints);
+        constraints.gridy = 5;
+        window.getContentPane().add(motorSupplierDelaySlider, constraints);
+        constraints.gridy = 6;
+        window.getContentPane().add(dealerDelayLabel, constraints);
+        constraints.gridy = 7;
         window.getContentPane().add(dealersDelaySlider, constraints);
 
-        constraints.gridx = 0;
+        constraints.gridy = constraints.gridx = 0;
+        constraints.gridheight = 2;
+        window.getContentPane().add(accessoryStorageBar, constraints);
+        constraints.gridy = 2;
+        window.getContentPane().add(bodyStorageBar, constraints);
+        constraints.gridy = 4;
+        window.getContentPane().add(motorStorageBar, constraints);
+        constraints.gridy = 6;
         window.getContentPane().add(carStorageBar, constraints);
 
-        constraints.gridy = 4;
+        constraints.gridheight = 1;
+        constraints.gridy = 8;
         window.getContentPane().add(amountTextArea, constraints);
 
         constraints.gridx = 1;

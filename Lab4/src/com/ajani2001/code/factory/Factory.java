@@ -7,8 +7,10 @@ import com.ajani2001.code.factory.items.CarBody;
 import com.ajani2001.code.factory.items.CarMotor;
 import com.ajani2001.code.ThreadPool;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -24,10 +26,18 @@ public class Factory {
     ThreadPool workers;
     ArrayList<Dealer> dealers;
     boolean isStarted;
+    String logFileName;
+    FileWriter logWriter;
 
     public Factory(Reader configReader) throws IOException {
         Properties config = new Properties();
         config.load(configReader);
+        logFileName = config.getProperty("LogFileName");
+        if(logFileName == null) {
+            logWriter = null;
+        } else {
+            logWriter = new FileWriter(logFileName);
+        }
         accessoryStorage = new Storage<>(Integer.parseInt(config.getProperty("AccessoryStorageCapacity", "100")));
         bodyStorage = new Storage<>(Integer.parseInt(config.getProperty("BodyStorageCapacity", "100")));
         motorStorage = new Storage<>(Integer.parseInt(config.getProperty("MotorStorageCapacity", "100")));
@@ -45,7 +55,7 @@ public class Factory {
         int dealersDelay = Integer.parseInt(config.getProperty("DealersDelay", "1000"));
         dealers = new ArrayList<>(dealersNumber);
         for(int i = 0; i < dealersNumber; ++i) {
-            dealers.add(i, new Dealer("Dealer"+i, dealersDelay, this));
+            dealers.add(i, new Dealer("Dealer"+i, dealersDelay, this, logWriter));
         }
     }
 
@@ -70,7 +80,13 @@ public class Factory {
             workers.putTask(new WorkerTask(accessoryStorage, motorStorage, bodyStorage, carStorage));
         }
         isStarted = true;
-        System.out.println("Started");
+        if(logWriter != null) {
+            try {
+                logWriter.write(LocalTime.now().toString()+": Started"+System.lineSeparator());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public synchronized void stop(){
@@ -98,7 +114,14 @@ public class Factory {
             return;
         }
         finally {
-            System.out.println("Stopped");
+            if(logWriter != null) {
+                try {
+                    logWriter.write(LocalTime.now().toString()+": Stopped"+System.lineSeparator());
+                    logWriter.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             isStarted = false;
         }
     }
@@ -205,6 +228,10 @@ public class Factory {
 
     public synchronized boolean isStarted() { //?
         return isStarted;
+    }
+
+    public int getWorkerTaskQueueSize() {
+        return workers.getTaskQueueSize();
     }
 
 }
