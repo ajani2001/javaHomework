@@ -1,6 +1,7 @@
 package com.ajani2001.code.client;
 
-import com.ajani2001.code.server.response.ConfigMessage;
+import com.ajani2001.code.server.model.ColorGrid;
+import com.ajani2001.code.server.response.*;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -17,7 +18,6 @@ import java.util.Map;
 
 public class SwingClient {
     Socket sockToServer;
-    ObjectInputStream sockInput;
     ObjectOutputStream sockOutput;
     Thread inputListenerThread;
     JFrame gameWindow;
@@ -39,12 +39,7 @@ public class SwingClient {
         gameWindow.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                try {
-                    sockToServer.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-                System.exit(0);
+                exit();
             }
         });
         gameWindow.getContentPane().setLayout(new GridBagLayout());
@@ -60,9 +55,7 @@ public class SwingClient {
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                synchronized (sockOutput) {
-                    sockOutput.writeObject(Request.START_GAME);
-                }
+                sendStartRequest();
             }
         });
 
@@ -71,7 +64,7 @@ public class SwingClient {
         highScoreButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                showScoreTable();
             }
         });
 
@@ -80,7 +73,7 @@ public class SwingClient {
         aboutButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                showInfoAbout();
             }
         });
 
@@ -89,7 +82,7 @@ public class SwingClient {
         exitButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                exit();
             }
         });
 
@@ -114,18 +107,32 @@ public class SwingClient {
         gameWindow.setVisible(true);
 
         sockToServer = new Socket(serverAddress, serverPort);
-        ConfigMessage config = (ConfigMessage) new ObjectInputStream(sockToServer.getInputStream()).readObject();
-        int myFieldWidth = config.getGameState().getMyField().getWidth();
-        int myFieldHeight = config.getGameState().getMyField().getHeight();
-        int enemyFieldWidth = config.getGameState().getEnemyField().getWidth();
-        int enemyFieldHeight = config.getGameState().getEnemyField().getHeight();
-        int nextFigurePanelWidth = config.getGameState().getNextFigureField().getWidth();
-        int nextFigurePanelHeight = config.getGameState().getNextFigureField().getHeight();
-        myField = new JPanel[myFieldWidth][myFieldHeight];
-        enemyField = new JPanel[enemyFieldWidth][enemyFieldHeight];
-        nextFigureField = new JPanel[nextFigurePanelWidth][nextFigurePanelHeight];
-        scoreTable = config.getScoreTable().getScoreMap();
-        about = config.getInfoAbout().getInfoAbout();
+        sockOutput = new ObjectOutputStream(sockToServer.getOutputStream());
+
+        inputListenerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ObjectInputStream sockInput = new ObjectInputStream(sockToServer.getInputStream());
+                while (!Thread.interrupted()) {
+                    Response serverMessage = (Response) sockInput.readObject();
+                    switch (serverMessage.getType()) {
+                        case CONFIG_MESSAGE -> applyConfig((ConfigMessage) serverMessage);
+                        case GAME_STATE -> updateGameState((GameStateMessage) serverMessage);
+                        case INFO_ABOUT -> about = ((InfoAboutResponse) serverMessage).getInfoAbout();
+                        case SCORE_TABLE -> scoreTable = ((ScoreTableResponse) serverMessage).getScoreMap();
+                        case POPUP_MESSAGE -> showPopupWindow((PopupMessage) serverMessage);
+                    }
+                }
+            }
+        });
+        inputListenerThread.start();
+
+        startButton.setEnabled(true);
+        highScoreButton.setEnabled(true);
+        aboutButton.setEnabled(true);
+        exitButton.setEnabled(true);
+
+
     }
 
     public void sendStartRequest() {
@@ -151,6 +158,7 @@ public class SwingClient {
         DefaultTableModel tableModel = new DefaultTableModel(tableData, new String[]{"Name", "Score"});
         TableRowSorter<DefaultTableModel> rowSorter = new TableRowSorter<>(tableModel);
         JTable table = new JTable(tableModel);
+        table.setEnabled(false);
         table.setRowSorter(rowSorter);
         rowSorter.toggleSortOrder(1);
         rowSorter.toggleSortOrder(1);
@@ -159,8 +167,67 @@ public class SwingClient {
     }
 
     public void showInfoAbout() {
-        
+        JOptionPane.showMessageDialog(gameWindow, about, "Info", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public void redraw
+    public void saveScore(String name) {
+        Request saveRequest = Request.SAVE_SCORE;
+        saveRequest.setParameter(name);
+        synchronized (sockOutput) {
+            sockOutput.writeObject(saveRequest);
+        }
+    }
+
+    public void exit() {
+        sockToServer.close();
+        System.exit(0);
+    }
+
+    public void applyConfig(ConfigMessage config) {
+        int myFieldWidth = config.getGameState().getMyField().getWidth();
+        int myFieldHeight = config.getGameState().getMyField().getHeight();
+        int enemyFieldWidth = config.getGameState().getEnemyField().getWidth();
+        int enemyFieldHeight = config.getGameState().getEnemyField().getHeight();
+        int nextFigurePanelWidth = config.getGameState().getNextFigureField().getWidth();
+        int nextFigurePanelHeight = config.getGameState().getNextFigureField().getHeight();
+        myField = new JPanel[myFieldWidth][myFieldHeight];
+        for(int i = 0; i < myFieldWidth; ++i) {
+            for(int j = 0; j < myFieldHeight; ++j) {
+                myField[i][j] = new JPanel();
+            }
+        }
+        enemyField = new JPanel[enemyFieldWidth][enemyFieldHeight];
+        for(int i = 0; i < enemyFieldWidth; ++i) {
+            for(int j = 0; j < enemyFieldHeight; ++j) {
+                enemyField[i][j] = new JPanel();
+            }
+        }
+        nextFigureField = new JPanel[nextFigurePanelWidth][nextFigurePanelHeight];
+        for(int i = 0; i < nextFigurePanelWidth; ++i) {
+            for(int j = 0; j < nextFigurePanelHeight; ++j) {
+                myField[i][j] = new JPanel();
+            }
+        }
+        scoreTable = config.getScoreTable().getScoreMap();
+        about = config.getInfoAbout().getInfoAbout();
+    }
+
+    public void updateGameState(GameStateMessage newGameState) {
+        updateFieldState(myField, newGameState.getMyField());
+        updateFieldState(enemyField, newGameState.getEnemyField());
+        updateFieldState(nextFigureField, newGameState.getNextFigureField());
+        scoreField.setText("My score: "+newGameState.getMyScore()+System.lineSeparator()+"Enemy score: "+newGameState.getEnemyScore());
+    }
+
+    public void updateFieldState(JPanel[][] field, ColorGrid newState) {
+        for(int i = 0; i < newState.getWidth(); ++i) {
+            for(int j = 0; j < newState.getHeight(); ++j) {
+                field[i][j].setBackground(newState.getGrid()[i][j]);
+            }
+        }
+    }
+
+    public void showPopupWindow(PopupMessage message) {
+        JOptionPane.showMessageDialog(gameWindow, message.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
+    }
 }
