@@ -1,9 +1,10 @@
 package com.ajani2001.code.client;
 
 import com.ajani2001.code.server.response.ConfigMessage;
-import com.ajani2001.code.server.response.Response;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,9 +13,12 @@ import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.Map;
 
 public class SwingClient {
     Socket sockToServer;
+    ObjectInputStream sockInput;
+    ObjectOutputStream sockOutput;
     Thread inputListenerThread;
     JFrame gameWindow;
     JPanel[][] myField;
@@ -56,7 +60,9 @@ public class SwingClient {
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                
+                synchronized (sockOutput) {
+                    sockOutput.writeObject(Request.START_GAME);
+                }
             }
         });
 
@@ -120,6 +126,40 @@ public class SwingClient {
         nextFigureField = new JPanel[nextFigurePanelWidth][nextFigurePanelHeight];
         scoreTable = config.getScoreTable().getScoreMap();
         about = config.getInfoAbout().getInfoAbout();
+    }
+
+    public void sendStartRequest() {
+        synchronized (sockOutput) {
+            sockOutput.writeObject(Request.START_GAME);
+        }
+    }
+
+    public void showScoreTable() {
+        JDialog popupWindow = new JDialog(gameWindow, "High scores", true);
+        Object [][] tableData;
+        synchronized (scoreTable) {
+            tableData = new Object[scoreTable.size()][2];
+            {
+                int i = 0;
+                for (Map.Entry<String, Integer> entry : scoreTable.entrySet()) {
+                    tableData[i][0] = entry.getKey();
+                    tableData[i][1] = entry.getValue();
+                    ++i;
+                }
+            }
+        }
+        DefaultTableModel tableModel = new DefaultTableModel(tableData, new String[]{"Name", "Score"});
+        TableRowSorter<DefaultTableModel> rowSorter = new TableRowSorter<>(tableModel);
+        JTable table = new JTable(tableModel);
+        table.setRowSorter(rowSorter);
+        rowSorter.toggleSortOrder(1);
+        rowSorter.toggleSortOrder(1);
+        popupWindow.getContentPane().add(table);
+        popupWindow.setVisible(true);
+    }
+
+    public void showInfoAbout() {
+        
     }
 
     public void redraw
