@@ -1,6 +1,6 @@
 package com.ajani2001.code.client;
 
-import com.ajani2001.code.server.model.ColorGrid;
+import com.ajani2001.code.server.fieldmodel.ColorGrid;
 import com.ajani2001.code.server.response.*;
 
 import javax.swing.*;

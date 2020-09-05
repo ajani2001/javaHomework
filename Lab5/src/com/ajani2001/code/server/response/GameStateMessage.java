@@ -1,6 +1,6 @@
 package com.ajani2001.code.server.response;
 
-import com.ajani2001.code.server.model.ColorGrid;
+import com.ajani2001.code.server.fieldmodel.ColorGrid;
 
 public class GameStateMessage extends Response {
     int myScore;

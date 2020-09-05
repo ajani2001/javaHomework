@@ -1,4 +1,4 @@
-package com.ajani2001.code.server.model;
+package com.ajani2001.code.server.fieldmodel;
 
 import java.awt.*;
 
