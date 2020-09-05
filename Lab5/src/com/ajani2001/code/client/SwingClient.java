@@ -12,20 +12,21 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
-import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SwingClient {
-    Socket sockToServer;
-    ObjectOutputStream sockOutput;
+    GameClientSocket sockToServer;
     Thread inputListenerThread;
+    HashMap<String, Integer> scoreTable;
+    String about;
     JFrame gameWindow;
+    JPanel myFieldPanel;
+    JPanel enemyFieldPanel;
+    JPanel nextFigurePanel;
     JPanel[][] myField;
     JPanel[][] enemyField;
     JPanel[][] nextFigureField;
-    HashMap<String, Integer> scoreTable;
-    String about;
     JLabel scoreField;
     JButton startButton;
     JButton highScoreButton;
@@ -39,14 +40,17 @@ public class SwingClient {
         gameWindow.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                exit();
+                exitGame();
             }
         });
         gameWindow.getContentPane().setLayout(new GridBagLayout());
 
-        JPanel myFieldPanel = new JPanel();
-        JPanel enemyFieldPanel = new JPanel();
-        JPanel nextFigurePanel = new JPanel();
+        myFieldPanel = new JPanel();
+        myFieldPanel.setBorder(BorderFactory.createRaisedBevelBorder());
+        enemyFieldPanel = new JPanel();
+        enemyFieldPanel.setBorder(BorderFactory.createRaisedBevelBorder());
+        nextFigurePanel = new JPanel();
+        nextFigurePanel.setBorder(BorderFactory.createRaisedBevelBorder());
 
         scoreField = new JLabel("Connecting..");
 
@@ -55,7 +59,12 @@ public class SwingClient {
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                sendStartRequest();
+                try {
+                    sockToServer.sendStartRequest();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
             }
         });
 
@@ -82,7 +91,7 @@ public class SwingClient {
         exitButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                exit();
+                exitGame();
             }
         });
 
@@ -106,55 +115,129 @@ public class SwingClient {
         gameWindow.getContentPane().add(exitButton, constraints);
         gameWindow.setVisible(true);
 
-        sockToServer = new Socket(serverAddress, serverPort);
-        sockOutput = new ObjectOutputStream(sockToServer.getOutputStream());
+        try {
+            sockToServer = new GameClientSocket(serverAddress, serverPort);
+        } catch (IOException e) {
+            e.printStackTrace();
+            showPopupWindow("Unable to connect to server");
+            return;
+        }
 
         inputListenerThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                ObjectInputStream sockInput = new ObjectInputStream(sockToServer.getInputStream());
                 while (!Thread.interrupted()) {
-                    Response serverMessage = (Response) sockInput.readObject();
+                    Response serverMessage = null;
+                    try {
+                        serverMessage = sockToServer.receiveResponse();
+                    } catch (IOException | ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
                     switch (serverMessage.getType()) {
                         case CONFIG_MESSAGE -> applyConfig((ConfigMessage) serverMessage);
                         case GAME_STATE -> updateGameState((GameStateMessage) serverMessage);
                         case INFO_ABOUT -> about = ((InfoAboutResponse) serverMessage).getInfoAbout();
                         case SCORE_TABLE -> scoreTable = ((ScoreTableResponse) serverMessage).getScoreMap();
-                        case POPUP_MESSAGE -> showPopupWindow((PopupMessage) serverMessage);
+                        case POPUP_MESSAGE -> showPopupWindow(((PopupMessage) serverMessage).getMessage());
                     }
                 }
             }
         });
         inputListenerThread.start();
 
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ENTER"), "toBottom");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("LEFT"), "moveLeft");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("RIGHT"), "moveRight");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("UP"), "rotate");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("pressed DOWN"), "speedUpEnable");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("released DOWN"), "speedUpDisable");
+        myFieldPanel.getActionMap().put("toBottom", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("toBottom");
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("moveLeft", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("moveLeft");
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("moveRight", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("moveRight");
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("rotate", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("rotate");
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("speedUpEnable", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("speedUpEnable");
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("speedUpDisable", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("speedUpDisable");
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                    showPopupWindow("I/O problems..");
+                }
+            }
+        });
+
         startButton.setEnabled(true);
         highScoreButton.setEnabled(true);
         aboutButton.setEnabled(true);
         exitButton.setEnabled(true);
-
-
-    }
-
-    public void sendStartRequest() {
-        synchronized (sockOutput) {
-            sockOutput.writeObject(Request.START_GAME);
-        }
     }
 
     public void showScoreTable() {
         JDialog popupWindow = new JDialog(gameWindow, "High scores", true);
         Object [][] tableData;
-        synchronized (scoreTable) {
-            tableData = new Object[scoreTable.size()][2];
-            {
-                int i = 0;
-                for (Map.Entry<String, Integer> entry : scoreTable.entrySet()) {
-                    tableData[i][0] = entry.getKey();
-                    tableData[i][1] = entry.getValue();
-                    ++i;
-                }
+        HashMap<String, Integer> currentScoreTableReference = scoreTable;
+        tableData = new Object[currentScoreTableReference.size()][2];
+        {
+            int i = 0;
+            for (Map.Entry<String, Integer> entry : currentScoreTableReference.entrySet()) {
+                tableData[i][0] = entry.getKey();
+                tableData[i][1] = entry.getValue();
+                ++i;
             }
         }
+
         DefaultTableModel tableModel = new DefaultTableModel(tableData, new String[]{"Name", "Score"});
         TableRowSorter<DefaultTableModel> rowSorter = new TableRowSorter<>(tableModel);
         JTable table = new JTable(tableModel);
@@ -170,16 +253,13 @@ public class SwingClient {
         JOptionPane.showMessageDialog(gameWindow, about, "Info", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public void saveScore(String name) {
-        Request saveRequest = Request.SAVE_SCORE;
-        saveRequest.setParameter(name);
-        synchronized (sockOutput) {
-            sockOutput.writeObject(saveRequest);
+    public void exitGame() {
+        inputListenerThread.interrupt();
+        try {
+            sockToServer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    }
-
-    public void exit() {
-        sockToServer.close();
         System.exit(0);
     }
 
@@ -190,24 +270,46 @@ public class SwingClient {
         int enemyFieldHeight = config.getGameState().getEnemyField().getHeight();
         int nextFigurePanelWidth = config.getGameState().getNextFigureField().getWidth();
         int nextFigurePanelHeight = config.getGameState().getNextFigureField().getHeight();
+
+        myFieldPanel.removeAll();
+        myFieldPanel.setLayout(new GridLayout(myFieldHeight, myFieldWidth));
         myField = new JPanel[myFieldWidth][myFieldHeight];
-        for(int i = 0; i < myFieldWidth; ++i) {
-            for(int j = 0; j < myFieldHeight; ++j) {
-                myField[i][j] = new JPanel();
+        for(int i = 0; i < myFieldHeight; ++i) {
+            for(int j = 0; j < myFieldWidth; ++j) {
+                JPanel cell = new JPanel();
+                cell.setBorder(BorderFactory.createEtchedBorder());
+                myField[j][i] = cell;
+                myFieldPanel.add(cell);
             }
         }
+        myFieldPanel.validate();
+
+        enemyFieldPanel.removeAll();
+        enemyFieldPanel.setLayout(new GridLayout(enemyFieldHeight, enemyFieldWidth));
         enemyField = new JPanel[enemyFieldWidth][enemyFieldHeight];
-        for(int i = 0; i < enemyFieldWidth; ++i) {
-            for(int j = 0; j < enemyFieldHeight; ++j) {
-                enemyField[i][j] = new JPanel();
+        for(int i = 0; i < enemyFieldHeight; ++i) {
+            for(int j = 0; j < enemyFieldWidth; ++j) {
+                JPanel cell = new JPanel();
+                cell.setBorder(BorderFactory.createEtchedBorder());
+                enemyField[j][i] = cell;
+                enemyFieldPanel.add(cell);
             }
         }
+        enemyFieldPanel.validate();
+
+        nextFigurePanel.removeAll();
+        nextFigurePanel.setLayout(new GridLayout(nextFigurePanelHeight, nextFigurePanelWidth));
         nextFigureField = new JPanel[nextFigurePanelWidth][nextFigurePanelHeight];
-        for(int i = 0; i < nextFigurePanelWidth; ++i) {
-            for(int j = 0; j < nextFigurePanelHeight; ++j) {
-                myField[i][j] = new JPanel();
+        for(int i = 0; i < nextFigurePanelHeight; ++i) {
+            for(int j = 0; j < nextFigurePanelWidth; ++j) {
+                JPanel cell = new JPanel();
+                cell.setBorder(BorderFactory.createEtchedBorder());
+                nextFigureField[j][i] = cell;
+                nextFigurePanel.add(cell);
             }
         }
+        nextFigurePanel.validate();
+
         scoreTable = config.getScoreTable().getScoreMap();
         about = config.getInfoAbout().getInfoAbout();
     }
@@ -227,7 +329,7 @@ public class SwingClient {
         }
     }
 
-    public void showPopupWindow(PopupMessage message) {
-        JOptionPane.showMessageDialog(gameWindow, message.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
+    public void showPopupWindow(String text) {
+        JOptionPane.showMessageDialog(gameWindow, text, "Message", JOptionPane.INFORMATION_MESSAGE);
     }
 }
