@@ -11,14 +11,12 @@ import java.net.Socket;
 import java.util.HashMap;
 
 public class ConnectionToClient extends Socket {
-    GameServer server;
     ObjectOutputStream oOStream;
     ObjectInputStream oIStream;
     boolean initialized;
 
-    public ConnectionToClient(GameServer server) {
+    public ConnectionToClient() {
         super();
-        this.server = server;
         initialized = false;
     }
 
@@ -29,36 +27,42 @@ public class ConnectionToClient extends Socket {
     }
 
     public Request receiveRequest() throws IOException, ClassNotFoundException {
+        if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oIStream) {
             return (Request) oIStream.readObject();
         }
     }
 
     public void sendConfig(ColorGrid myField, int myScore, ColorGrid enemyField, int enemyScore, ColorGrid nextFigureField, HashMap<String, Integer> scoreMap, String infoAbout) throws IOException {
+        if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) { // how to avoid inconsistent data state??
             oOStream.writeObject(new ConfigMessage(new GameStateMessage(myScore, enemyScore, myField, enemyField, nextFigureField), new InfoAboutResponse(infoAbout), new ScoreTableResponse(scoreMap)));
         }
     }
 
     public void sendGameState(ColorGrid myField, int myScore, ColorGrid enemyField, int enemyScore, ColorGrid nextFigureField) throws IOException {
+        if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) {
             oOStream.writeObject(new GameStateMessage(myScore, enemyScore, myField, enemyField, nextFigureField));
         }
     }
 
     public void sendScoreTable(HashMap<String, Integer> scoreMap) throws IOException {
+        if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) {
             oOStream.writeObject(new ScoreTableResponse(scoreMap));
         }
     }
 
     public void sendInfoAbout(String infoAbout) throws IOException {
+        if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) {
             oOStream.writeObject(new InfoAboutResponse(infoAbout));
         }
     }
 
     public void sendPopupMessage(String message) throws IOException {
+        if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) {
             oOStream.writeObject(new PopupMessage(message));
         }

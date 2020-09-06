@@ -12,6 +12,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,12 +31,13 @@ public class SwingClient {
     JLabel scoreField;
     JButton startButton;
     JButton highScoreButton;
+    JButton scoreSaveButton;
     JButton aboutButton;
     JButton exitButton;
 
     public SwingClient(String serverAddress, int serverPort) {
         gameWindow = new JFrame("Tetris online");
-        gameWindow.setSize(800, 600);
+        gameWindow.setSize(700, 600);
         gameWindow.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         gameWindow.addWindowListener(new WindowAdapter() {
             @Override
@@ -77,6 +79,23 @@ public class SwingClient {
             }
         });
 
+        scoreSaveButton = new JButton("Save score");
+        scoreSaveButton.setEnabled(false);
+        scoreSaveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String playerName = (String) JOptionPane.showInputDialog(gameWindow, "Enter you name", "Save score", JOptionPane.QUESTION_MESSAGE, null, null, "Player");
+                if(playerName != null && !playerName.isBlank()) {
+                    try {
+                        sockToServer.saveScore(playerName);
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
+                        showPopupWindow("I/O problems..");
+                    }
+                }
+            }
+        });
+
         aboutButton = new JButton("About");
         aboutButton.setEnabled(false);
         aboutButton.addActionListener(new ActionListener() {
@@ -95,23 +114,30 @@ public class SwingClient {
             }
         });
 
-        GridBagConstraints constraints = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0);
-        constraints.gridheight = 8;
+        GridBagConstraints constraints = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0);
+        constraints.gridheight = 12;
         gameWindow.getContentPane().add(myFieldPanel, constraints);
         constraints.gridx = 1;
         gameWindow.getContentPane().add(enemyFieldPanel, constraints);
         constraints.gridx = 2;
+        constraints.weightx = 0.02;
         constraints.gridheight = 1;
         gameWindow.getContentPane().add(scoreField, constraints);
         constraints.gridy = 1;
+        constraints.insets = new Insets(2, 20, 2, 10);
+        constraints.gridheight = 4;
         gameWindow.getContentPane().add(nextFigurePanel, constraints);
-        constraints.gridy = 2;
-        gameWindow.getContentPane().add(startButton, constraints);
-        constraints.gridy = 3;
-        gameWindow.getContentPane().add(highScoreButton, constraints);
-        constraints.gridy = 4;
-        gameWindow.getContentPane().add(aboutButton, constraints);
         constraints.gridy = 5;
+        constraints.insets = new Insets(2, 2, 2, 2);
+        constraints.gridheight = 1;
+        gameWindow.getContentPane().add(startButton, constraints);
+        constraints.gridy = 6;
+        gameWindow.getContentPane().add(highScoreButton, constraints);
+        constraints.gridy = 7;
+        gameWindow.getContentPane().add(scoreSaveButton, constraints);
+        constraints.gridy = 8;
+        gameWindow.getContentPane().add(aboutButton, constraints);
+        constraints.gridy = 9;
         gameWindow.getContentPane().add(exitButton, constraints);
         gameWindow.setVisible(true);
 
@@ -220,6 +246,7 @@ public class SwingClient {
 
         startButton.setEnabled(true);
         highScoreButton.setEnabled(true);
+        scoreSaveButton.setEnabled(true);
         aboutButton.setEnabled(true);
         exitButton.setEnabled(true);
     }
@@ -240,12 +267,14 @@ public class SwingClient {
 
         DefaultTableModel tableModel = new DefaultTableModel(tableData, new String[]{"Name", "Score"});
         TableRowSorter<DefaultTableModel> rowSorter = new TableRowSorter<>(tableModel);
+        rowSorter.setComparator(1, Comparator.<Integer>naturalOrder());
         JTable table = new JTable(tableModel);
         table.setEnabled(false);
         table.setRowSorter(rowSorter);
         rowSorter.toggleSortOrder(1);
         rowSorter.toggleSortOrder(1);
         popupWindow.getContentPane().add(table);
+        popupWindow.pack();
         popupWindow.setVisible(true);
     }
 
@@ -254,11 +283,15 @@ public class SwingClient {
     }
 
     public void exitGame() {
-        inputListenerThread.interrupt();
-        try {
-            sockToServer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(inputListenerThread != null) {
+            inputListenerThread.interrupt();
+        }
+        if(sockToServer != null) {
+            try {
+                sockToServer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         System.exit(0);
     }
@@ -319,7 +352,7 @@ public class SwingClient {
         updateFieldState(myField, newGameState.getMyField());
         updateFieldState(enemyField, newGameState.getEnemyField());
         updateFieldState(nextFigureField, newGameState.getNextFigureField());
-        scoreField.setText("My score: "+newGameState.getMyScore()+System.lineSeparator()+"Enemy score: "+newGameState.getEnemyScore());
+        scoreField.setText("My score: "+newGameState.getMyScore()+", Enemy score: "+newGameState.getEnemyScore());
     }
 
     public void updateFieldState(JPanel[][] field, ColorGrid newState) {

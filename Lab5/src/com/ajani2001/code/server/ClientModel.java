@@ -17,6 +17,8 @@ public class ClientModel {
         sockToClient = connectionSocket;
         field = new FieldModel(width, height);
         server = serverParam;
+        speedUpMode = false;
+        isReady = false;
         connectionListenerThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -59,8 +61,6 @@ public class ClientModel {
             }
         });
         connectionListenerThread.start();
-        speedUpMode = false;
-        isReady = false;
     }
 
     public ConnectionToClient getConnection() {

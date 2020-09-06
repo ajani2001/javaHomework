@@ -57,7 +57,11 @@ public class FigureManager {
 
     public BlockFigure currentFigure() {
         try {
-            return (BlockFigure) availableFigures.get(currentCode / 4).clone();
+            BlockFigure result = (BlockFigure) availableFigures.get(currentCode / 4).clone();
+            for(int i = 0; i < currentCode%4; ++i) {
+                result.rotate(true);
+            }
+            return result;
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
             return null;
@@ -71,7 +75,7 @@ public class FigureManager {
         for(int i = 0; i < currentFigure.points.length; ++i) {
             figureGrid.grid[currentFigure.points[i].x + 2][currentFigure.points[i].y + 2] = currentFigure.color;
         }
-        return currentFigure();
+        return currentFigure;
     }
 
     public ColorGrid getCurrentFigureGrid() {

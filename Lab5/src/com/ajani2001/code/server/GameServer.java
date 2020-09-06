@@ -70,6 +70,7 @@ public class GameServer extends ServerSocket implements Runnable {
                         ioException.printStackTrace();
                     }
                     players[0] = null;
+                    continue;
                 }
             }
             if (!players[0].getConnection().isConnected()) {
@@ -103,6 +104,7 @@ public class GameServer extends ServerSocket implements Runnable {
                         ioException.printStackTrace();
                     }
                     players[1] = null;
+                    continue;
                 }
             }
             if (!players[1].getConnection().isConnected()) {
@@ -135,7 +137,7 @@ public class GameServer extends ServerSocket implements Runnable {
     public ConnectionToClient accept() {
         while(true) {
             try {
-                ConnectionToClient result = new ConnectionToClient(this);
+                ConnectionToClient result = new ConnectionToClient();
                 implAccept(result);
                 result.init();
                 return result;
@@ -147,7 +149,7 @@ public class GameServer extends ServerSocket implements Runnable {
 
     public void notifyReady() {
         if(players[0] == null || players[1] == null) return;
-        if(players[0].isReady && players[1].isReady && players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
+        if(players[0].isReady() && players[1].isReady() && players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
             players[0].getField().startNewGame();
             players[1].getField().startNewGame();
             gameTimer = new MyTimer(new Runnable() {
@@ -158,14 +160,19 @@ public class GameServer extends ServerSocket implements Runnable {
                         figureGenerator.nextFigure();
                         players[0].getField().spawnFigure(figureGenerator.currentFigure());
                         players[1].getField().spawnFigure(figureGenerator.currentFigure());
+                        if(players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
+                            gameTimer.interrupt();
+                        }
                     } else {
                         players[0].notifyTimerTick(tickNumber);
                         players[1].notifyTimerTick(tickNumber);
                     }
+                    int currentMinScore = Integer.min(players[0].getField().getCurrentScore(), players[1].getField().getCurrentScore());
+                    gameTimer.setDelayMillis((int) (500 * Math.pow(0.8, currentMinScore/1000)));
                     notifyStateChanged();
                     ++tickNumber;
                 }
-            }, 1000);
+            }, 500);
             gameTimer.start();
         }
     }
@@ -184,10 +191,12 @@ public class GameServer extends ServerSocket implements Runnable {
         try(FileWriter scoreFileWriter = new FileWriter(scoreTableFileName)) {
             if (!model.getField().isGameFinished()) {
                 model.getConnection().sendPopupMessage("Game is not finished yet!");
+                scoreFileWriter.close();
                 return;
             }
             if (model.getField().getCurrentScore() == 0) {
                 model.getConnection().sendPopupMessage("You have no score!");
+                scoreFileWriter.close();
                 return;
             }
             scoreMap.put(playerName, model.getField().getCurrentScore());

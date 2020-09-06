@@ -8,13 +8,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 public class GameClientSocket extends Socket {
     final ObjectInputStream oIStream;
     final ObjectOutputStream oOStream;
 
-    public GameClientSocket(String host, int port) throws UnknownHostException, IOException {
+    public GameClientSocket(String host, int port) throws IOException {
         super(host, port);
         oIStream = new ObjectInputStream(getInputStream());
         oOStream = new ObjectOutputStream(getOutputStream());
