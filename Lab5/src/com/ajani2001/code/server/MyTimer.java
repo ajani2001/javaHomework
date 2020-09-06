@@ -17,7 +17,7 @@ class MyTimer extends Thread {
     }
 
     public void run() {
-        while(isInterrupted()) {
+        while(!isInterrupted()) {
             try {
                 super.run();
                 sleep(delayMillis);

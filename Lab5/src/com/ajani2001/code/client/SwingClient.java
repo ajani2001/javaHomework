@@ -310,6 +310,7 @@ public class SwingClient {
         }
         nextFigurePanel.validate();
 
+        updateGameState(config.getGameState());
         scoreTable = config.getScoreTable().getScoreMap();
         about = config.getInfoAbout().getInfoAbout();
     }

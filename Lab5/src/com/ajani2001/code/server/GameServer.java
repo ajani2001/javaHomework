@@ -154,16 +154,24 @@ public class GameServer extends ServerSocket implements Runnable {
                 int tickNumber = 0;
                 @Override
                 public void run() {
-                    players[0].notifyTimerTick(tickNumber);
-                    players[1].notifyTimerTick(tickNumber);
+                    if(players[0].getField().getCurrentFigure() == null && players[1].getField().getCurrentFigure() == null) {
+                        figureGenerator.nextFigure();
+                        players[0].getField().spawnFigure(figureGenerator.currentFigure());
+                        players[1].getField().spawnFigure(figureGenerator.currentFigure());
+                    } else {
+                        players[0].notifyTimerTick(tickNumber);
+                        players[1].notifyTimerTick(tickNumber);
+                    }
                     notifyStateChanged();
                     ++tickNumber;
                 }
             }, 1000);
+            gameTimer.start();
         }
     }
 
     public void notifyStateChanged() {
+        if(players[0] == null || players[1] == null) return;
         try {
             players[0].getConnection().sendGameState(players[0].getField().getGameField(), players[0].getField().getCurrentScore(), players[1].getField().getGameField(), players[1].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid());
             players[1].getConnection().sendGameState(players[1].getField().getGameField(), players[1].getField().getCurrentScore(), players[0].getField().getGameField(), players[0].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid());

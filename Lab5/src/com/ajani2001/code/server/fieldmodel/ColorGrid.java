@@ -1,8 +1,9 @@
 package com.ajani2001.code.server.fieldmodel;
 
 import java.awt.*;
+import java.io.Serializable;
 
-public class ColorGrid implements Cloneable {
+public class ColorGrid implements Cloneable, Serializable {
     Color[][] grid;
     int width;
     int height;

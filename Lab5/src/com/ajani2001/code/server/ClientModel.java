@@ -1,6 +1,6 @@
 package com.ajani2001.code.server;
 
-import com.ajani2001.code.client.Request;
+import com.ajani2001.code.client.request.Request;
 import com.ajani2001.code.server.fieldmodel.FieldModel;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ public class ClientModel {
                 while(!Thread.interrupted()) {
                     try {
                         Request incomingRequest = sockToClient.receiveRequest();
-                        switch (incomingRequest) {
+                        switch (incomingRequest.getType()) {
                             case START_GAME -> {
                                 isReady = true;
                                 server.notifyReady();

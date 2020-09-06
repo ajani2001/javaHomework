@@ -1,5 +1,7 @@
 package com.ajani2001.code.client;
 
+import com.ajani2001.code.client.request.Request;
+import com.ajani2001.code.client.request.RequestType;
 import com.ajani2001.code.server.response.Response;
 
 import java.io.IOException;
@@ -26,24 +28,19 @@ public class GameClientSocket extends Socket {
 
     public void sendStartRequest() throws IOException {
         synchronized (oOStream) {
-            oOStream.writeObject(Request.START_GAME);
+            oOStream.writeObject(new Request(RequestType.START_GAME, null));
         }
     }
 
     public void sendKeyAction(String actionName) throws IOException {
-        synchronized (Request.KEY_ACTION) {
-            Request.KEY_ACTION.setParameter(actionName);
-            synchronized (oOStream) {
-                oOStream.writeObject(Request.KEY_ACTION);
-            }
+        synchronized (oOStream) {
+            oOStream.writeObject(new Request(RequestType.KEY_ACTION, actionName));
         }
     }
 
     public void saveScore(String name) throws IOException {
-        Request saveRequest = Request.SAVE_SCORE;
-        saveRequest.setParameter(name);
         synchronized (oOStream) {
-            oOStream.writeObject(saveRequest);
+            oOStream.writeObject(new Request(RequestType.SAVE_SCORE, name));
         }
     }
 }
