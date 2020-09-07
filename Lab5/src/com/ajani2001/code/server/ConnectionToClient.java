@@ -36,6 +36,7 @@ public class ConnectionToClient extends Socket {
     public void sendConfig(ColorGrid myField, int myScore, ColorGrid enemyField, int enemyScore, ColorGrid nextFigureField, HashMap<String, Integer> scoreMap, String infoAbout) throws IOException {
         if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) { // how to avoid inconsistent data state??
+            oOStream.reset();
             oOStream.writeObject(new ConfigMessage(new GameStateMessage(myScore, enemyScore, myField, enemyField, nextFigureField), new InfoAboutResponse(infoAbout), new ScoreTableResponse(scoreMap)));
         }
     }
@@ -50,6 +51,7 @@ public class ConnectionToClient extends Socket {
     public void sendScoreTable(HashMap<String, Integer> scoreMap) throws IOException {
         if(!initialized) throw new IOException("ConnectionToClient object is not initialized");
         synchronized (oOStream) {
+            oOStream.reset();
             oOStream.writeObject(new ScoreTableResponse(scoreMap));
         }
     }

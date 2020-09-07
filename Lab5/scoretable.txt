@@ -1,2 +1,3 @@
-AjaniStrong 10300
-sofya 6700
+#Mon Sep 07 17:39:22 GMT+07:00 2020
+AjaniStrong=10300
+sofya=6700
