@@ -158,7 +158,10 @@ public class GameServer extends ServerSocket implements Runnable {
                 @Override
                 public void run() {
                     if(players[0].getField().getCurrentFigure() == null && players[1].getField().getCurrentFigure() == null) {
-                        if(tickNumber%2 != 0) return;
+                        if(tickNumber%2 != 0) {
+                            ++tickNumber;
+                            return;
+                        }
                         try {
                             players[0].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
                         } catch (CloneNotSupportedException impossible) {}
