@@ -3,6 +3,7 @@ package com.ajani2001.code.server;
 import com.ajani2001.code.server.exception.FigureConfigFileInvalidException;
 import com.ajani2001.code.server.fieldmodel.ColorGrid;
 import com.ajani2001.code.server.fieldmodel.FigureManager;
+import com.ajani2001.code.server.fieldmodel.BlockFigure;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -157,9 +158,14 @@ public class GameServer extends ServerSocket implements Runnable {
                 @Override
                 public void run() {
                     if(players[0].getField().getCurrentFigure() == null && players[1].getField().getCurrentFigure() == null) {
+                        if(tickNumber%2 != 0) return;
+                        try {
+                            players[0].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
+                        } catch (CloneNotSupportedException impossible) {}
+                        try {
+                            players[1].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
+                        } catch (CloneNotSupportedException impossible) {}
                         figureGenerator.nextFigure();
-                        players[0].getField().spawnFigure(figureGenerator.currentFigure());
-                        players[1].getField().spawnFigure(figureGenerator.currentFigure());
                         if(players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
                             gameTimer.interrupt();
                         }

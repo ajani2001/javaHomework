@@ -13,7 +13,7 @@ public class FigureManager {
     ColorGrid figureGrid;
     ArrayList<BlockFigure> availableFigures;
     Random figuresRandomizer;
-    int currentCode;
+    BlockFigure currentFigure;
 
     public FigureManager(Reader configReader) throws FigureConfigFileInvalidException {
         figuresRandomizer = new Random(System.currentTimeMillis());
@@ -55,25 +55,25 @@ public class FigureManager {
         nextFigure();
     }
 
-    public BlockFigure currentFigure() {
-        try {
-            BlockFigure result = (BlockFigure) availableFigures.get(currentCode / 4).clone();
-            for(int i = 0; i < currentCode%4; ++i) {
-                result.rotate(true);
-            }
-            return result;
-        } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-            return null;
-        }
+    public BlockFigure getCurrentFigure() {
+        return currentFigure;
     }
 
     public BlockFigure nextFigure() {
-        currentCode = figuresRandomizer.nextInt(availableFigures.size() * 4);
+        int currentCode = figuresRandomizer.nextInt(availableFigures.size() * 4);
+        int currentIndex = currentCode / 4;
+        int currentRotation = currentCode % 4;
+        Point[] clonedPointsArray = new Point[availableFigures.get(currentIndex).getPoints().length];
+        for(int i = 0; i < clonedPointsArray.length; ++i) {
+            clonedPointsArray[i] = (Point) availableFigures.get(currentIndex).getPoints()[i].clone();
+        }
+        currentFigure = new BlockFigure(clonedPointsArray, availableFigures.get(currentIndex).isRotatable());
+        for(int i = 0; i < currentRotation; ++i) {
+            currentFigure.rotate(true);
+        }
         figureGrid = new ColorGrid(5, 5);
-        BlockFigure currentFigure = currentFigure();
-        for(int i = 0; i < currentFigure.points.length; ++i) {
-            figureGrid.grid[currentFigure.points[i].x + 2][currentFigure.points[i].y + 2] = currentFigure.color;
+        for(int i = 0; i < currentFigure.getPoints().length; ++i) {
+            figureGrid.grid[currentFigure.getPoints()[i].x + 2][currentFigure.getPoints()[i].y + 2] = currentFigure.getColor();
         }
         return currentFigure;
     }

@@ -3,7 +3,7 @@ package com.ajani2001.code.server.fieldmodel;
 import java.awt.*;
 import java.util.Random;
 
-class BlockFigure implements Cloneable {
+public class BlockFigure implements Cloneable {
     Point[] points;
     boolean rotatable;
     Color color;
@@ -36,9 +36,14 @@ class BlockFigure implements Cloneable {
         return color;
     }
 
+    public boolean isRotatable() {
+        return rotatable;
+    }
+
     @Override
     public Object clone() throws CloneNotSupportedException {
         BlockFigure result = (BlockFigure) super.clone();
+        result.points = new Point[points.length];
         for(int i = 0; i < points.length; ++i) {
             result.points[i] = (Point) this.points[i].clone();
         }
