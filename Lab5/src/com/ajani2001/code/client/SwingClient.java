@@ -54,24 +54,88 @@ public class SwingClient {
         nextFigurePanel = new JPanel();
         nextFigurePanel.setBorder(BorderFactory.createRaisedBevelBorder());
 
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ENTER"), "toBottom");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("LEFT"), "moveLeft");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("RIGHT"), "moveRight");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("UP"), "rotate");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("pressed DOWN"), "speedUpEnable");
+        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("released DOWN"), "speedUpDisable");
+        myFieldPanel.getActionMap().put("toBottom", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("toBottom");
+                } catch (IOException ioException) {
+                    closeConnection();
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("moveLeft", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("moveLeft");
+                } catch (IOException ioException) {
+                    closeConnection();
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("moveRight", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("moveRight");
+                } catch (IOException ioException) {
+                    closeConnection();
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("rotate", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("rotate");
+                } catch (IOException ioException) {
+                    closeConnection();
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("speedUpEnable", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("speedUpEnable");
+                } catch (IOException ioException) {
+                    closeConnection();
+                }
+            }
+        });
+        myFieldPanel.getActionMap().put("speedUpDisable", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    sockToServer.sendKeyAction("speedUpDisable");
+                } catch (IOException ioException) {
+                    closeConnection();
+                }
+            }
+        });
+
         scoreField = new JLabel("Connecting..");
 
         startButton = new JButton("Start");
-        startButton.setEnabled(false);
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
                     sockToServer.sendStartRequest();
                 } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
+                    closeConnection();
                 }
             }
         });
 
         highScoreButton = new JButton("High scores");
-        highScoreButton.setEnabled(false);
         highScoreButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -80,7 +144,6 @@ public class SwingClient {
         });
 
         scoreSaveButton = new JButton("Save score");
-        scoreSaveButton.setEnabled(false);
         scoreSaveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -89,15 +152,13 @@ public class SwingClient {
                     try {
                         sockToServer.saveScore(playerName);
                     } catch (IOException ioException) {
-                        ioException.printStackTrace();
-                        showPopupWindow("I/O problems..");
+                        closeConnection();
                     }
                 }
             }
         });
 
         aboutButton = new JButton("About");
-        aboutButton.setEnabled(false);
         aboutButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -106,7 +167,6 @@ public class SwingClient {
         });
 
         exitButton = new JButton("Exit");
-        exitButton.setEnabled(false);
         exitButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -139,13 +199,14 @@ public class SwingClient {
         gameWindow.getContentPane().add(aboutButton, constraints);
         constraints.gridy = 9;
         gameWindow.getContentPane().add(exitButton, constraints);
+        setEnabled(false);
         gameWindow.setVisible(true);
 
         try {
             sockToServer = new GameClientSocket(serverAddress, serverPort);
         } catch (IOException e) {
-            e.printStackTrace();
             showPopupWindow("Unable to connect to server");
+            scoreField.setText("Disconnected");
             return;
         }
 
@@ -157,7 +218,8 @@ public class SwingClient {
                     try {
                         serverMessage = sockToServer.receiveResponse();
                     } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
+                        closeConnection();
+                        break;
                     }
                     switch (serverMessage.getType()) {
                         case CONFIG_MESSAGE -> applyConfig((ConfigMessage) serverMessage);
@@ -167,88 +229,12 @@ public class SwingClient {
                         case POPUP_MESSAGE -> showPopupWindow(((PopupMessage) serverMessage).getMessage());
                     }
                 }
+                showPopupWindow("Disconnected from server");
             }
         });
         inputListenerThread.start();
 
-        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ENTER"), "toBottom");
-        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("LEFT"), "moveLeft");
-        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("RIGHT"), "moveRight");
-        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("UP"), "rotate");
-        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("pressed DOWN"), "speedUpEnable");
-        myFieldPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("released DOWN"), "speedUpDisable");
-        myFieldPanel.getActionMap().put("toBottom", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    sockToServer.sendKeyAction("toBottom");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
-                }
-            }
-        });
-        myFieldPanel.getActionMap().put("moveLeft", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    sockToServer.sendKeyAction("moveLeft");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
-                }
-            }
-        });
-        myFieldPanel.getActionMap().put("moveRight", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    sockToServer.sendKeyAction("moveRight");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
-                }
-            }
-        });
-        myFieldPanel.getActionMap().put("rotate", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    sockToServer.sendKeyAction("rotate");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
-                }
-            }
-        });
-        myFieldPanel.getActionMap().put("speedUpEnable", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    sockToServer.sendKeyAction("speedUpEnable");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
-                }
-            }
-        });
-        myFieldPanel.getActionMap().put("speedUpDisable", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    sockToServer.sendKeyAction("speedUpDisable");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                    showPopupWindow("I/O problems..");
-                }
-            }
-        });
-
-        startButton.setEnabled(true);
-        highScoreButton.setEnabled(true);
-        scoreSaveButton.setEnabled(true);
-        aboutButton.setEnabled(true);
-        exitButton.setEnabled(true);
+        setEnabled(true);
     }
 
     public void showScoreTable() {
@@ -283,16 +269,7 @@ public class SwingClient {
     }
 
     public void exitGame() {
-        if(inputListenerThread != null) {
-            inputListenerThread.interrupt();
-        }
-        if(sockToServer != null) {
-            try {
-                sockToServer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        closeConnection();
         System.exit(0);
     }
 
@@ -304,48 +281,29 @@ public class SwingClient {
         int nextFigurePanelWidth = config.getGameState().getNextFigureField().getWidth();
         int nextFigurePanelHeight = config.getGameState().getNextFigureField().getHeight();
 
-        myFieldPanel.removeAll();
-        myFieldPanel.setLayout(new GridLayout(myFieldHeight, myFieldWidth));
         myField = new JPanel[myFieldWidth][myFieldHeight];
-        for(int i = 0; i < myFieldHeight; ++i) {
-            for(int j = 0; j < myFieldWidth; ++j) {
-                JPanel cell = new JPanel();
-                cell.setBorder(BorderFactory.createEtchedBorder());
-                myField[j][i] = cell;
-                myFieldPanel.add(cell);
-            }
-        }
-        myFieldPanel.validate();
-
-        enemyFieldPanel.removeAll();
-        enemyFieldPanel.setLayout(new GridLayout(enemyFieldHeight, enemyFieldWidth));
         enemyField = new JPanel[enemyFieldWidth][enemyFieldHeight];
-        for(int i = 0; i < enemyFieldHeight; ++i) {
-            for(int j = 0; j < enemyFieldWidth; ++j) {
-                JPanel cell = new JPanel();
-                cell.setBorder(BorderFactory.createEtchedBorder());
-                enemyField[j][i] = cell;
-                enemyFieldPanel.add(cell);
-            }
-        }
-        enemyFieldPanel.validate();
-
-        nextFigurePanel.removeAll();
-        nextFigurePanel.setLayout(new GridLayout(nextFigurePanelHeight, nextFigurePanelWidth));
         nextFigureField = new JPanel[nextFigurePanelWidth][nextFigurePanelHeight];
-        for(int i = 0; i < nextFigurePanelHeight; ++i) {
-            for(int j = 0; j < nextFigurePanelWidth; ++j) {
-                JPanel cell = new JPanel();
-                cell.setBorder(BorderFactory.createEtchedBorder());
-                nextFigureField[j][i] = cell;
-                nextFigurePanel.add(cell);
-            }
-        }
-        nextFigurePanel.validate();
-
+        recreateField(myFieldWidth, myFieldHeight, myFieldPanel, myField);
+        recreateField(enemyFieldWidth, enemyFieldHeight, enemyFieldPanel, enemyField);
+        recreateField(nextFigurePanelWidth, nextFigurePanelHeight, nextFigurePanel, nextFigureField);
         updateGameState(config.getGameState());
+        gameWindow.validate();
         scoreTable = config.getScoreTable().getScoreMap();
         about = config.getInfoAbout().getInfoAbout();
+    }
+
+    public void recreateField(int width, int height, JPanel containingPanel, JPanel[][] cells) {
+        containingPanel.removeAll();
+        containingPanel.setLayout(new GridLayout(height, width));
+        for (int y = 0; y < height; ++y) {
+            for(int x = 0; x < width; ++x) {
+                JPanel cell = new JPanel();
+                cell.setBorder(BorderFactory.createEtchedBorder());
+                cells[x][y] = cell;
+                containingPanel.add(cell);
+            }
+        }
     }
 
     public void updateGameState(GameStateMessage newGameState) {
@@ -365,5 +323,28 @@ public class SwingClient {
 
     public void showPopupWindow(String text) {
         JOptionPane.showMessageDialog(gameWindow, text, "Message", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public void setEnabled(boolean b){
+        myFieldPanel.setEnabled(b);
+        enemyFieldPanel.setEnabled(b);
+        nextFigurePanel.setEnabled(b);
+        startButton.setEnabled(b);
+        highScoreButton.setEnabled(b);
+        scoreSaveButton.setEnabled(b);
+        aboutButton.setEnabled(b);
+        exitButton.setEnabled(b);
+    }
+
+    public void closeConnection() {
+        if(inputListenerThread != null) {
+            inputListenerThread.interrupt();
+        }
+        if(sockToServer != null) {
+            try {
+                sockToServer.close();
+            } catch (IOException ignored) {}
+        }
+        setEnabled(false);
     }
 }
