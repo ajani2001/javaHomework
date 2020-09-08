@@ -57,74 +57,22 @@ public class GameServer extends ServerSocket implements Runnable {
     }
 
     public void run() {
-        while(!Thread.interrupted()) {
+        while(!Thread.interrupted() && isBound() && !isClosed()) { // am I right?
             int checkTimeoutMillis = 1000;
             if(players[0] == null) {
-                players[0] = new ClientModel(10, 20, this, accept());
                 try {
+                    players[0] = new ClientModel(10, 20, this, accept());
                     players[0].getConnection().sendConfig(players[0].getField().getGameField(), players[0].getField().getCurrentScore(), players[1]==null?new ColorGrid(10, 20):players[1].getField().getGameField(), players[1]==null?0:players[1].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
                 } catch (IOException e) {
-                    e.printStackTrace();
-                    try {
-                        players[0].getConnection().close();
-                    } catch (IOException ioException) {
-                        ioException.printStackTrace();
-                    }
-                    players[0] = null;
-                    continue;
-                }
-            }
-            if (!players[0].getConnection().isConnected()) {
-                try {
-                    players[0].getConnection().close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                players[0] = new ClientModel(10, 20, this, accept());
-                try {
-                    players[0].getConnection().sendConfig(players[0].getField().getGameField(), players[0].getField().getCurrentScore(), players[1]==null?new ColorGrid(10, 20):players[1].getField().getGameField(), players[1]==null?0:players[1].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    try {
-                        players[0].getConnection().close();
-                    } catch (IOException ioException) {
-                        ioException.printStackTrace();
-                    }
-                    players[0] = null;
+                    removeClient(players[0]);
                 }
             }
             if(players[1] == null) {
-                players[1] = new ClientModel(10, 20, this, accept());
                 try {
+                    players[1] = new ClientModel(10, 20, this, accept());
                     players[1].getConnection().sendConfig(players[1].getField().getGameField(), players[1].getField().getCurrentScore(), players[0]==null?new ColorGrid(10, 20):players[0].getField().getGameField(), players[0]==null?0:players[0].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
                 } catch (IOException e) {
-                    e.printStackTrace();
-                    try {
-                        players[1].getConnection().close();
-                    } catch (IOException ioException) {
-                        ioException.printStackTrace();
-                    }
-                    players[1] = null;
-                    continue;
-                }
-            }
-            if (!players[1].getConnection().isConnected()) {
-                try {
-                    players[1].getConnection().close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                players[1] = new ClientModel(10, 20, this, accept());
-                try {
-                    players[1].getConnection().sendConfig(players[1].getField().getGameField(), players[1].getField().getCurrentScore(), players[0]==null?new ColorGrid(10, 20):players[0].getField().getGameField(), players[0]==null?0:players[0].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    try {
-                        players[1].getConnection().close();
-                    } catch (IOException ioException) {
-                        ioException.printStackTrace();
-                    }
-                    players[1] = null;
+                    removeClient(players[1]);
                 }
             }
             try {
@@ -135,17 +83,11 @@ public class GameServer extends ServerSocket implements Runnable {
         }
     }
 
-    public ConnectionToClient accept() {
-        while(true) {
-            try {
-                ConnectionToClient result = new ConnectionToClient();
-                implAccept(result);
-                result.init();
-                return result;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    public ConnectionToClient accept() throws IOException {
+        ConnectionToClient result = new ConnectionToClient();
+        implAccept(result);
+        result.init();
+        return result;
     }
 
     public void notifyReady() {
@@ -153,71 +95,127 @@ public class GameServer extends ServerSocket implements Runnable {
         if(players[0].isReady() && players[1].isReady() && players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
             players[0].getField().startNewGame();
             players[1].getField().startNewGame();
+            players[0].resetReady();
+            players[1].resetReady();
             gameTimer = new MyTimer(new Runnable() {
                 int tickNumber = 0;
                 @Override
                 public void run() {
+                    if(players[0] == null || players[1] == null) {
+                        gameTimer.interrupt();
+                        return;
+                    }
                     if(players[0].getField().getCurrentFigure() == null && players[1].getField().getCurrentFigure() == null) {
-                        if(tickNumber%2 != 0) {
-                            ++tickNumber;
-                            return;
-                        }
-                        try {
-                            players[0].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
-                        } catch (CloneNotSupportedException impossible) {}
-                        try {
-                            players[1].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
-                        } catch (CloneNotSupportedException impossible) {}
-                        figureGenerator.nextFigure();
-                        if(players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
-                            gameTimer.interrupt();
+                        if(tickNumber%4 == 0) {
+                            try {
+                                players[0].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
+                                players[1].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
+                            } catch (CloneNotSupportedException impossible) {}
+                            if (players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
+                                gameTimer.interrupt();
+                                return;
+                            }
+                            figureGenerator.nextFigure();
+                            int currentMinScore = Integer.min(players[0].getField().getCurrentScore(), players[1].getField().getCurrentScore());
+                            gameTimer.setDelayMillis((int) (250 * Math.pow(0.8, currentMinScore / 1000)));
+                            notifyStateChanged();
                         }
                     } else {
                         players[0].notifyTimerTick(tickNumber);
                         players[1].notifyTimerTick(tickNumber);
+                        notifyStateChanged();
                     }
-                    int currentMinScore = Integer.min(players[0].getField().getCurrentScore(), players[1].getField().getCurrentScore());
-                    gameTimer.setDelayMillis((int) (500 * Math.pow(0.8, currentMinScore/1000)));
-                    notifyStateChanged();
                     ++tickNumber;
                 }
-            }, 500);
+            }, 250);
             gameTimer.start();
         }
     }
 
     public void notifyStateChanged() {
         if(players[0] == null || players[1] == null) return;
+        int modelIndex = 0;
         try {
             players[0].getConnection().sendGameState(players[0].getField().getGameField(), players[0].getField().getCurrentScore(), players[1].getField().getGameField(), players[1].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid());
+            modelIndex = 1;
             players[1].getConnection().sendGameState(players[1].getField().getGameField(), players[1].getField().getCurrentScore(), players[0].getField().getGameField(), players[0].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid());
         } catch (IOException e) {
-            e.printStackTrace();
+            switch (modelIndex) {
+                case 0 -> removeClient(players[0]);
+                case 1 -> removeClient(players[1]);
+            }
         }
     }
 
     public void saveScore(ClientModel model, String playerName) {
-        try(FileWriter scoreFileWriter = new FileWriter(scoreTableFileName)) {
+        int modelIndex = -1;
+        try {
             if (!model.getField().isGameFinished()) {
                 model.getConnection().sendPopupMessage("Game is not finished yet!");
-                scoreFileWriter.close();
                 return;
             }
             if (model.getField().getCurrentScore() == 0) {
                 model.getConnection().sendPopupMessage("You have no score!");
-                scoreFileWriter.close();
                 return;
             }
-            scoreMap.put(playerName, model.getField().getCurrentScore());
-            Properties scoreMapSaver = new Properties();
-            for (Map.Entry<String, Integer> scoreRecord : scoreMap.entrySet()) {
-                scoreMapSaver.setProperty(scoreRecord.getKey(), scoreRecord.getValue().toString());
+
+            try (FileWriter scoreFileWriter = new FileWriter(scoreTableFileName)) {
+                scoreMap.put(playerName, model.getField().getCurrentScore());
+                Properties scoreMapSaver = new Properties();
+                for (Map.Entry<String, Integer> scoreRecord : scoreMap.entrySet()) {
+                    scoreMapSaver.setProperty(scoreRecord.getKey(), scoreRecord.getValue().toString());
+                }
+                scoreMapSaver.store(scoreFileWriter, null);
+            } catch (IOException e) {
+                e.printStackTrace();
+                model.getConnection().sendPopupMessage("Unable to save :(");
             }
-            scoreMapSaver.store(scoreFileWriter, null);
-            players[0].getConnection().sendScoreTable(scoreMap);
-            players[1].getConnection().sendScoreTable(scoreMap);
+
+            if(players[0] != null) {
+                modelIndex = 0;
+                players[0].getConnection().sendScoreTable(scoreMap);
+            }
+            if(players[1] != null) {
+                modelIndex = 1;
+                players[1].getConnection().sendScoreTable(scoreMap);
+            }
+            modelIndex = -1;
+            model.getConnection().sendPopupMessage("Saved!");
         } catch (IOException e) {
-            e.printStackTrace();
+            switch (modelIndex) {
+                case -1 -> removeClient(model);
+                case  0 -> removeClient(players[0]);
+                case  1 -> removeClient(players[1]);
+            }
+        }
+    }
+
+    public void removeClient(ClientModel client) { //?synchronized
+        if(client==players[0]) {
+            players[0] = null;
+            gameTimer.interrupt();
+        } else if(client==players[1]) {
+            players[1] = null;
+            gameTimer.interrupt();
+        } else {
+            return;
+        }
+        try {
+            client.getConnection().close();
+        } catch (IOException ignored) {}
+
+        ClientModel anotherPlayer;
+        if(players[0] != null) {
+            anotherPlayer = players[0];
+        } else if(players[1] != null) {
+            anotherPlayer = players[1];
+        } else {
+            return;
+        }
+        try {
+            anotherPlayer.getConnection().sendPopupMessage("Your opponent has disconnected!");
+        } catch (IOException e) {
+            removeClient(anotherPlayer);
         }
     }
 }

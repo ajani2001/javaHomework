@@ -54,7 +54,7 @@ public class ClientModel {
                             }
                         }
                     } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
+                        server.removeClient(ClientModel.this);
                         break;
                     }
                 }
@@ -75,8 +75,12 @@ public class ClientModel {
         return isReady;
     }
 
+    public void resetReady() {
+        isReady = false;
+    }
+
     public void notifyTimerTick(int tickNumber) {
-        if(!speedUpMode && tickNumber%2 != 0) return;
+        if(!speedUpMode && tickNumber%4 != 0) return;
         field.moveFigureDown();
     }
 }
