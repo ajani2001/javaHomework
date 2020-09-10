@@ -15,7 +15,7 @@ public class FieldModel {
         gameFinished = true;
     }
 
-    public void startNewGame() {
+    public synchronized void startNewGame() {
         grid = new ColorGrid(grid.width, grid.height);
         currentScore = 0;
         currentFigure = null;
@@ -23,7 +23,7 @@ public class FieldModel {
         gameFinished = false;
     }
 
-    public void moveFigureLeft() {
+    public synchronized void moveFigureLeft() {
         if(gameFinished || currentFigure == null) return;
         --currentFigureOrigin.x;
         if(!isCurrentFigureValid()) {
@@ -31,7 +31,7 @@ public class FieldModel {
         }
     }
 
-    public void moveFigureRight() {
+    public synchronized void moveFigureRight() {
         if(gameFinished || currentFigure == null) return;
         ++currentFigureOrigin.x;
         if(!isCurrentFigureValid()) {
@@ -39,7 +39,7 @@ public class FieldModel {
         }
     }
 
-    public void moveFigureDown() {
+    public synchronized void moveFigureDown() {
         if(gameFinished || currentFigure == null) return;
         ++currentFigureOrigin.y;
         if(!isCurrentFigureValid()) {
@@ -51,7 +51,7 @@ public class FieldModel {
         }
     }
 
-    public void rotateFigure() {
+    public synchronized void rotateFigure() {
         if(gameFinished || currentFigure == null) return;
         currentFigure.rotate(true);
         if(!isCurrentFigureValid()) {
@@ -59,7 +59,7 @@ public class FieldModel {
         }
     }
 
-    public void pushFigureToBottom() {
+    public synchronized void pushFigureToBottom() {
         if(gameFinished || currentFigure == null) return;
         while (isCurrentFigureValid()) {
             ++currentFigureOrigin.y;
@@ -115,26 +115,33 @@ public class FieldModel {
         }
     }
 
-    public ColorGrid getGameField() {
+    public synchronized ColorGrid getGameField() {
         ColorGrid currentView = (ColorGrid) grid.clone();
         if(gameFinished || currentFigure == null) return currentView;
         overlayFigure(currentView, currentFigure, currentFigureOrigin);
         return  currentView;
     }
 
-    public int getCurrentScore() {
+    public synchronized int getCurrentScore() {
         return currentScore;
     }
 
-    public BlockFigure getCurrentFigure() {
-        return currentFigure;
+    public synchronized BlockFigure getCurrentFigure() {
+        if(currentFigure == null) {
+            return null;
+        }
+        try {
+            return (BlockFigure) currentFigure.clone();
+        } catch (CloneNotSupportedException impossible) {
+            return null;
+        }
     }
 
     public boolean isGameFinished() {
         return gameFinished;
     }
 
-    public void spawnFigure(BlockFigure figure) {
+    public synchronized void spawnFigure(BlockFigure figure) {
         if(gameFinished) return;
         currentFigure = figure;
         currentFigureOrigin = new Point(grid.width/2, -1);

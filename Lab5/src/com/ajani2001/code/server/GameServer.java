@@ -59,18 +59,24 @@ public class GameServer extends ServerSocket implements Runnable {
     public void run() {
         while(!Thread.interrupted() && isBound() && !isClosed()) { // am I right?
             int checkTimeoutMillis = 1000;
-            if(players[0] == null) {
+            if (players[0] == null) {
                 try {
-                    players[0] = new ClientModel(10, 20, this, accept());
-                    players[0].getConnection().sendConfig(players[0].getField().getGameField(), players[0].getField().getCurrentScore(), players[1]==null?new ColorGrid(10, 20):players[1].getField().getGameField(), players[1]==null?0:players[1].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
+                    ClientModel newClient = new ClientModel(10, 20, this, accept());
+                    synchronized (this) {
+                        players[0] = newClient;
+                        players[0].getConnection().sendConfig(players[0].getField().getGameField(), players[0].getField().getCurrentScore(), players[1] == null ? new ColorGrid(10, 20) : players[1].getField().getGameField(), players[1] == null ? 0 : players[1].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
+                    }
                 } catch (IOException e) {
                     removeClient(players[0]);
                 }
             }
-            if(players[1] == null) {
+            if (players[1] == null) {
                 try {
-                    players[1] = new ClientModel(10, 20, this, accept());
-                    players[1].getConnection().sendConfig(players[1].getField().getGameField(), players[1].getField().getCurrentScore(), players[0]==null?new ColorGrid(10, 20):players[0].getField().getGameField(), players[0]==null?0:players[0].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
+                    ClientModel newClient = new ClientModel(10, 20, this, accept());
+                    synchronized (this) {
+                        players[1] = newClient;
+                        players[1].getConnection().sendConfig(players[1].getField().getGameField(), players[1].getField().getCurrentScore(), players[0] == null ? new ColorGrid(10, 20) : players[0].getField().getGameField(), players[0] == null ? 0 : players[0].getField().getCurrentScore(), figureGenerator.getCurrentFigureGrid(), scoreMap, infoAbout);
+                    }
                 } catch (IOException e) {
                     removeClient(players[1]);
                 }
@@ -90,7 +96,7 @@ public class GameServer extends ServerSocket implements Runnable {
         return result;
     }
 
-    public void notifyReady() {
+    public synchronized void notifyReady() {
         if(players[0] == null || players[1] == null) return;
         if(players[0].isReady() && players[1].isReady() && players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
             players[0].getField().startNewGame();
@@ -101,38 +107,41 @@ public class GameServer extends ServerSocket implements Runnable {
                 int tickNumber = 0;
                 @Override
                 public void run() {
-                    if(players[0] == null || players[1] == null) {
-                        gameTimer.interrupt();
-                        return;
-                    }
-                    if(players[0].getField().getCurrentFigure() == null && players[1].getField().getCurrentFigure() == null) {
-                        if(tickNumber%4 == 0) {
-                            try {
-                                players[0].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
-                                players[1].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
-                            } catch (CloneNotSupportedException impossible) {}
-                            if (players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
-                                gameTimer.interrupt();
-                                return;
+                    synchronized (GameServer.this) {
+                        if (players[0] == null || players[1] == null) {
+                            gameTimer.interrupt();
+                            return;
+                        }
+                        if (players[0].getField().getCurrentFigure() == null && players[1].getField().getCurrentFigure() == null) {
+                            if (tickNumber % 4 == 0) {
+                                try {
+                                    players[0].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
+                                    players[1].getField().spawnFigure((BlockFigure) figureGenerator.getCurrentFigure().clone());
+                                } catch (CloneNotSupportedException impossible) {
+                                }
+                                if (players[0].getField().isGameFinished() && players[1].getField().isGameFinished()) {
+                                    gameTimer.interrupt();
+                                    return;
+                                }
+                                figureGenerator.nextFigure();
+                                int currentMinScore = Integer.min(players[0].getField().getCurrentScore(), players[1].getField().getCurrentScore());
+                                gameTimer.setDelayMillis((int) (250 * Math.pow(0.8, currentMinScore / 1000)));
+                                notifyStateChanged();
                             }
-                            figureGenerator.nextFigure();
-                            int currentMinScore = Integer.min(players[0].getField().getCurrentScore(), players[1].getField().getCurrentScore());
-                            gameTimer.setDelayMillis((int) (250 * Math.pow(0.8, currentMinScore / 1000)));
+                        } else {
+                            players[0].notifyTimerTick(tickNumber);
+                            players[1].notifyTimerTick(tickNumber);
                             notifyStateChanged();
                         }
-                    } else {
-                        players[0].notifyTimerTick(tickNumber);
-                        players[1].notifyTimerTick(tickNumber);
-                        notifyStateChanged();
+                        ++tickNumber;
                     }
-                    ++tickNumber;
                 }
             }, 250);
             gameTimer.start();
         }
     }
 
-    public void notifyStateChanged() {
+    public synchronized void notifyStateChanged() {
         if(players[0] == null || players[1] == null) return;
         int modelIndex = 0;
         try {
@@ -147,7 +156,7 @@ public class GameServer extends ServerSocket implements Runnable {
         }
     }
 
-    public void saveScore(ClientModel model, String playerName) {
+    public synchronized void saveScore(ClientModel model, String playerName) {
         int modelIndex = -1;
         try {
             if (!model.getField().isGameFinished()) {
@@ -190,7 +199,7 @@ public class GameServer extends ServerSocket implements Runnable {
         }
     }
 
-    public void removeClient(ClientModel client) { //?synchronized
+    public synchronized void removeClient(ClientModel client) { //?synchronized
         if(client==players[0]) {
             players[0] = null;
             gameTimer.interrupt();
