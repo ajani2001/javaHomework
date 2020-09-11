@@ -118,7 +118,9 @@ public class SwingGUI implements GUI {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String playerName = (String) JOptionPane.showInputDialog(mainFrame, "Enter you name", "Save score", JOptionPane.QUESTION_MESSAGE, null, null, "Player");
-                if(!playerName.isBlank()) model.saveScore(playerName);
+                if(playerName != null && !playerName.isBlank()) {
+                    model.saveScore(playerName);
+                }
             }
         });
 
